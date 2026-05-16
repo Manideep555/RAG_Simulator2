@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RAG Simulator</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#07111f;
+  --card:#101b2e;
+  --card2:#162338;
+  --border:rgba(255,255,255,0.08);
+  --primary:#6ee7ff;
+  --secondary:#8b5cf6;
+  --text:#f5f7ff;
+  --muted:#9ba9c9;
+  --green:#4ade80;
+  --yellow:#facc15;
+  --red:#fb7185;
+}
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+}
+
+body{
+  background:
+    radial-gradient(circle at top left, rgba(110,231,255,0.08), transparent 20%),
+    radial-gradient(circle at bottom right, rgba(139,92,246,0.12), transparent 30%),
+    var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  overflow-x:hidden;
+}
+
+.container{
+  width:min(1400px,92%);
+  margin:auto;
+  padding:40px 0 80px;
+}
+
+.hero{
+  text-align:center;
+  margin-bottom:40px;
+}
+
+.hero h1{
+  font-size:4rem;
+  line-height:1;
+  margin-bottom:14px;
+  letter-spacing:-2px;
+}
+
+.gradient{
+  background:linear-gradient(90deg,var(--primary),#fff,var(--secondary));
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+.hero p{
+  color:var(--muted);
+  max-width:850px;
+  margin:auto;
+  line-height:1.8;
+  font-size:1.05rem;
+}
+
+.layout{
+  display:grid;
+  grid-template-columns:320px 1fr;
+  gap:24px;
+}
+
+.card{
+  background:rgba(16,27,46,0.75);
+  border:1px solid var(--border);
+  backdrop-filter:blur(14px);
+  border-radius:24px;
+  padding:24px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.35);
+}
+
+.sidebar h3{
+  margin-bottom:18px;
+  color:var(--primary);
+}
+
+.chunk{
+  padding:16px;
+  border-radius:16px;
+  background:var(--card2);
+  border:1px solid transparent;
+  margin-bottom:14px;
+  cursor:pointer;
+  transition:0.3s ease;
+}
+
+.chunk:hover{
+  transform:translateY(-2px);
+}
+
+.chunk.active{
+  border:1px solid var(--primary);
+  background:rgba(110,231,255,0.08);
+}
+
+.chunk h4{
+  margin-bottom:8px;
+}
+
+.chunk p{
+  color:var(--muted);
+  font-size:0.92rem;
+  line-height:1.6;
+}
+
+.main-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:24px;
+}
+
+.query-box textarea{
+  width:100%;
+  height:120px;
+  background:#0b1527;
+  border:1px solid var(--border);
+  border-radius:18px;
+  color:white;
+  padding:18px;
+  resize:none;
+  font-family:inherit;
+  font-size:1rem;
+  margin-top:16px;
+}
+
+button{
+  border:none;
+  padding:14px 22px;
+  border-radius:14px;
+  margin-top:18px;
+  background:linear-gradient(135deg,var(--primary),#67e8f9);
+  color:#04131f;
+  font-weight:700;
+  cursor:pointer;
+  transition:0.3s ease;
+}
+
+button:hover{
+  transform:translateY(-2px);
+}
+
+.pipeline{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:16px;
+}
+
+.step{
+  padding:20px;
+  border-radius:20px;
+  background:var(--card2);
+  border:1px solid var(--border);
+  min-height:220px;
+  position:relative;
+  overflow:hidden;
+}
+
+.step::before{
+  content:'';
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:3px;
+  background:linear-gradient(90deg,var(--primary),var(--secondary));
+}
+
+.step h3{
+  margin-bottom:14px;
+  font-size:1rem;
+}
+
+.step-content{
+  color:var(--muted);
+  font-size:0.92rem;
+  line-height:1.7;
+}
+
+.highlight{
+  color:var(--green);
+  font-weight:600;
+}
+
+.score{
+  display:flex;
+  justify-content:space-between;
+  margin-top:10px;
+  padding:10px;
+  border-radius:12px;
+  background:rgba(255,255,255,0.04);
+}
+
+.score span:last-child{
+  color:var(--green);
+}
+
+.answer{
+  line-height:1.9;
+  color:#dfe7ff;
+}
+
+.answer strong{
+  color:var(--primary);
+}
+
+.flow{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin-top:30px;
+  color:var(--muted);
+}
+
+.arrow{
+  color:var(--primary);
+}
+
+.legend{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:16px;
+  margin-top:24px;
+}
+
+.legend-card{
+  padding:18px;
+  border-radius:16px;
+  background:var(--card2);
+  border:1px solid var(--border);
+}
+
+.legend-card h4{
+  margin-bottom:10px;
+}
+
+.legend-card p{
+  color:var(--muted);
+  font-size:0.92rem;
+  line-height:1.6;
+}
+
+.badge{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  font-size:0.8rem;
+  margin-bottom:12px;
+}
+
+.blue{
+  background:rgba(110,231,255,0.15);
+  color:var(--primary);
+}
+
+.green{
+  background:rgba(74,222,128,0.15);
+  color:var(--green);
+}
+
+.purple{
+  background:rgba(139,92,246,0.15);
+  color:#c4b5fd;
+}
+
+.yellow{
+  background:rgba(250,204,21,0.15);
+  color:var(--yellow);
+}
+
+@media(max-width:1200px){
+  .pipeline{
+    grid-template-columns:1fr;
+  }
+
+  .layout{
+    grid-template-columns:1fr;
+  }
+
+  .legend{
+    grid-template-columns:1fr;
+  }
+
+  .hero h1{
+    font-size:3rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="hero">
+    <h1><span class="gradient">RAG</span> Simulator</h1>
+    <p>
+      Understand Retrieval-Augmented Generation step-by-step.
+      This simulator demonstrates how enterprise AI systems retrieve chunks from vector databases,
+      compare embeddings using cosine similarity, augment prompts with relevant context,
+      and generate grounded answers using an LLM.
+    </p>
+  </div>
+
+  <div class="layout">
+
+    <div class="sidebar card">
+
+      <h3>📚 Knowledge Base</h3>
+
+      <div class="chunk" id="chunk1">
+        <h4>Chunk 1</h4>
+        <p>
+          RAG retrieves relevant chunks from a vector database using semantic similarity.
+        </p>
+      </div>
+
+      <div class="chunk" id="chunk2">
+        <h4>Chunk 2</h4>
+        <p>
+          Embeddings convert text into high-dimensional vectors representing semantic meaning.
+        </p>
+      </div>
+
+      <div class="chunk" id="chunk3">
+        <h4>Chunk 3</h4>
+        <p>
+          Cosine similarity measures the angle between vectors to identify semantic closeness.
+        </p>
+      </div>
+
+      <div class="chunk" id="chunk4">
+        <h4>Chunk 4</h4>
+        <p>
+          The retrieved context is appended to the prompt before sending it to the LLM.
+        </p>
+      </div>
+
+      <div class="chunk" id="chunk5">
+        <h4>Chunk 5</h4>
+        <p>
+          Grounded responses reduce hallucinations because the LLM answers from provided context.
+        </p>
+      </div>
+
+    </div>
+
+    <div class="main-grid">
+
+      <div class="card query-box">
+        <h2>User Query</h2>
+
+        <textarea id="queryInput">
+How does RAG use embeddings and cosine similarity to generate grounded answers?
+        </textarea>
+
+        <button onclick="runRAG()">
+          Run RAG Pipeline
+        </button>
+      </div>
+
+      <div class="pipeline">
+
+        <div class="step">
+          <h3>1️⃣ User Query</h3>
+          <div class="step-content" id="queryStep">
+            Waiting for query...
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>2️⃣ Query Embedding</h3>
+          <div class="step-content" id="embeddingStep">
+            Embedding not generated yet.
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>3️⃣ Vector Search</h3>
+          <div class="step-content" id="retrievalStep">
+            Retrieval not started.
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>4️⃣ Context Augmentation</h3>
+          <div class="step-content" id="contextStep">
+            Context not built.
+          </div>
+        </div>
+
+        <div class="step">
+          <h3>5️⃣ LLM Response</h3>
+          <div class="step-content answer" id="answerStep">
+            Waiting for generation...
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card">
+        <h2>🔄 RAG Flow</h2>
+
+        <div class="flow">
+          <span>User Query</span>
+          <span class="arrow">➜</span>
+          <span>Embedding</span>
+          <span class="arrow">➜</span>
+          <span>Vector Search</span>
+          <span class="arrow">➜</span>
+          <span>Context Injection</span>
+          <span class="arrow">➜</span>
+          <span>LLM Generation</span>
+        </div>
+
+        <div class="legend">
+
+          <div class="legend-card">
+            <div class="badge blue">Embeddings</div>
+            <h4>Semantic Representation</h4>
+            <p>
+              User queries and chunks are converted into vectors that represent meaning rather than exact keywords.
+            </p>
+          </div>
+
+          <div class="legend-card">
+            <div class="badge green">Vector Search</div>
+            <h4>Similarity Matching</h4>
+            <p>
+              Cosine similarity identifies chunks semantically closest to the user query.
+            </p>
+          </div>
+
+          <div class="legend-card">
+            <div class="badge purple">Augmented Prompt</div>
+            <h4>Context Injection</h4>
+            <p>
+              Retrieved chunks are appended to the prompt before being sent to the LLM.
+            </p>
+          </div>
+
+          <div class="legend-card">
+            <div class="badge yellow">Grounded Answer</div>
+            <h4>Reduced Hallucinations</h4>
+            <p>
+              The LLM answers using retrieved enterprise context instead of relying only on training data.
+            </p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+const chunks = [
+  {
+    id:"chunk1",
+    text:"RAG retrieves relevant chunks from a vector database using semantic similarity.",
+    score:0
+  },
+  {
+    id:"chunk2",
+    text:"Embeddings convert text into high-dimensional vectors representing semantic meaning.",
+    score:0
+  },
+  {
+    id:"chunk3",
+    text:"Cosine similarity measures the angle between vectors to identify semantic closeness.",
+    score:0
+  },
+  {
+    id:"chunk4",
+    text:"The retrieved context is appended to the prompt before sending it to the LLM.",
+    score:0
+  },
+  {
+    id:"chunk5",
+    text:"Grounded responses reduce hallucinations because the LLM answers from provided context.",
+    score:0
+  }
+];
+
+function fakeEmbedding(text){
+  return [
+    Math.random().toFixed(2),
+    Math.random().toFixed(2),
+    Math.random().toFixed(2),
+    Math.random().toFixed(2),
+    Math.random().toFixed(2)
+  ];
+}
+
+function runRAG(){
+
+  document.querySelectorAll('.chunk').forEach(c=>{
+    c.classList.remove('active');
+  });
+
+  const query = document.getElementById('queryInput').value;
+
+  document.getElementById('queryStep').innerHTML = `
+    <span class="highlight">Input Query:</span><br><br>
+    "${query}"
+  `;
+
+  const embedding = fakeEmbedding(query);
+
+  document.getElementById('embeddingStep').innerHTML = `
+    Query converted into embedding vector:<br><br>
+    <span class="highlight">[${embedding.join(', ')}]</span>
+    <br><br>
+    The embedding captures semantic meaning of the query.
+  `;
+
+  chunks.forEach(chunk=>{
+    chunk.score = Math.random().toFixed(2);
+  });
+
+  chunks.sort((a,b)=>b.score-a.score);
+
+  const topChunks = chunks.slice(0,3);
+
+  let retrievalHTML = `
+    Using cosine similarity between query embedding and chunk embeddings:
+    <br><br>
+  `;
+
+  topChunks.forEach(chunk=>{
+
+    document.getElementById(chunk.id).classList.add('active');
+
+    retrievalHTML += `
+      <div class="score">
+        <span>${chunk.text}</span>
+        <span>${chunk.score}</span>
+      </div>
+    `;
+  });
+
+  document.getElementById('retrievalStep').innerHTML = retrievalHTML;
+
+  let contextText = topChunks.map(c=>`• ${c.text}`).join("<br><br>");
+
+  document.getElementById('contextStep').innerHTML = `
+    Retrieved chunks appended to prompt:
+    <br><br>
+    ${contextText}
+  `;
+
+  document.getElementById('answerStep').innerHTML = `
+    <strong>Generated Answer:</strong><br><br>
+
+    RAG works by first converting the user query into an embedding vector.
+    The system then compares that embedding against chunk embeddings stored in the vector database using cosine similarity.
+
+    The most semantically relevant chunks are retrieved and injected into the prompt as additional context.
+
+    The LLM finally generates a grounded response using both:
+    <br><br>
+
+    • The original user query<br>
+    • Retrieved contextual chunks
+    <br><br>
+
+    This significantly reduces hallucinations because the answer is generated from retrieved enterprise knowledge rather than relying purely on pretrained memory.
+  `;
+}
+
+runRAG();
+
+</script>
+
+</body>
+</html>
