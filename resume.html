@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raja Manideep | AI & Data Governance Product Leader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #060816;
+      --card: rgba(13, 18, 37, 0.75);
+      --line: rgba(255,255,255,0.08);
+      --primary: #6ee7ff;
+      --secondary: #8b5cf6;
+      --text: #f5f7ff;
+      --muted: #a7b0d3;
+      --success: #50fa7b;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: radial-gradient(circle at top left, rgba(111,231,255,0.08), transparent 25%),
+                  radial-gradient(circle at top right, rgba(139,92,246,0.12), transparent 30%),
+                  var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    .grid {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,1), rgba(0,0,0,0.2));
+      z-index: -2;
+    }
+
+    .orb {
+      position: fixed;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.18;
+      z-index: -1;
+      animation: float 18s ease-in-out infinite alternate;
+    }
+
+    .orb.one {
+      background: var(--primary);
+      top: -120px;
+      left: -100px;
+    }
+
+    .orb.two {
+      background: var(--secondary);
+      bottom: -140px;
+      right: -80px;
+      animation-delay: 4s;
+    }
+
+    @keyframes float {
+      from {
+        transform: translateY(0px) translateX(0px);
+      }
+      to {
+        transform: translateY(40px) translateX(30px);
+      }
+    }
+
+    .container {
+      width: min(1200px, 92%);
+      margin: auto;
+      padding: 40px 0 80px;
+    }
+
+    .hero {
+      min-height: 92vh;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .glass {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      backdrop-filter: blur(18px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 50px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: '';
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(110,231,255,0.25), transparent 70%);
+      top: -60px;
+      right: -40px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(110,231,255,0.25);
+      background: rgba(110,231,255,0.08);
+      color: var(--primary);
+      font-size: 14px;
+      margin-bottom: 24px;
+      font-weight: 500;
+      letter-spacing: 0.3px;
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(3rem, 6vw, 5.5rem);
+      line-height: 0.95;
+      margin-bottom: 20px;
+      letter-spacing: -2px;
+    }
+
+    .gradient {
+      background: linear-gradient(90deg, var(--primary), #ffffff, var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--muted);
+      max-width: 700px;
+      margin-bottom: 28px;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 14px 22px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #67e8f9);
+      color: #04131f;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
+    }
+
+    .stat-card {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card h2 {
+      font-size: 2.5rem;
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--primary);
+    }
+
+    .stat-card p {
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    section {
+      margin-top: 80px;
+    }
+
+    .section-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2rem;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .section-title::before {
+      content: '';
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), transparent);
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .timeline-card {
+      padding: 28px;
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+
+    .timeline-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .timeline-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 8px;
+    }
+
+    .timeline-card .company {
+      color: var(--primary);
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .timeline-card p {
+      color: var(--muted);
+    }
+
+    .skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+
+    .skill-card {
+      padding: 24px;
+    }
+
+    .skill-card h4 {
+      margin-bottom: 16px;
+      color: var(--primary);
+    }
+
+    .chip-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .vision-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 22px;
+    }
+
+    .vision-card {
+      padding: 30px;
+      min-height: 240px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .vision-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent, rgba(255,255,255,0.03));
+      pointer-events: none;
+    }
+
+    .vision-card h3 {
+      margin-bottom: 16px;
+      font-size: 1.3rem;
+    }
+
+    .vision-card p {
+      color: var(--muted);
+    }
+
+    .footer {
+      margin-top: 80px;
+      padding: 40px 0 10px;
+      text-align: center;
+      color: var(--muted);
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 10px;
+      animation: blink 0.8s infinite;
+    }
+
+    @keyframes blink {
+      50% {
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .vision-board,
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-card {
+        padding: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid"></div>
+  <div class="orb one"></div>
+  <div class="orb two"></div>
+
+  <div class="container">
+    <section class="hero">
+      <div class="hero-card glass">
+        <div class="tag">
+          ● AI Product Leadership • Data Governance • Enterprise Platforms
+        </div>
+
+        <h1>
+          Raja <span class="gradient">Manideep</span>
+        </h1>
+
+        <p class="subtitle" id="typing-text">
+          Building the future of enterprise AI, data governance, metadata intelligence, and trustworthy data ecosystems.
+        </p>
+
+        <div class="hero-actions">
+          <button class="btn btn-primary" onclick="scrollToSection('experience')">
+            Explore Experience
+          </button>
+
+          <button class="btn btn-secondary" onclick="downloadResume()">
+            Download Resume
+          </button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card glass">
+          <h2>AI</h2>
+          <p>Driving AI Governance, RAG, MCP, and Enterprise AI Product Strategy</p>
+        </div>
+
+        <div class="stat-card glass">
+          <h2>DG</h2>
+          <p>Deep expertise in Metadata Governance, Privacy, Data Quality & Cataloging</p>
+        </div>
+
+        <div class="stat-card glass">
+          <h2>SAFe</h2>
+          <p>Cross-functional product orchestration with scalable operating models</p>
+        </div>
+
+        <div class="stat-card glass">
+          <h2>Vision</h2>
+          <p>Focused on becoming a next-generation AI Product Leader</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="about">
+      <h2 class="section-title">About</h2>
+
+      <div class="glass timeline-card">
+        <p>
+          Associate Director of Product specializing in Data Governance and Enterprise AI Platforms. Leading product initiatives around AI Governance, Data Product Marketplace ecosystems, metadata intelligence, privacy, and enterprise-scale governance workflows.
+          <br><br>
+          Passionate about combining product strategy, AI systems, and user-centric thinking to build platforms that create trust in enterprise data. Strong interest in executive communication, AI product leadership, and building future-ready governance architectures.
+        </p>
+      </div>
+    </section>
+
+    <section id="experience">
+      <h2 class="section-title">Experience & Leadership</h2>
+
+      <div class="timeline">
+        <div class="timeline-card glass">
+          <h3>Associate Director of Product</h3>
+          <div class="company">Enterprise Data Governance Platform</div>
+          <p>
+            Leading product ownership across metadata governance, privacy suite, access control, data quality tooling, AI governance, and enterprise integrations. Driving roadmap strategy and cross-functional execution.
+          </p>
+        </div>
+
+        <div class="timeline-card glass">
+          <h3>AI Governance & Marketplace Vision</h3>
+          <div class="company">Strategic Product Initiatives</div>
+          <p>
+            Conceptualized and designed a futuristic Data Product Marketplace enabling discovery, trust, approvals, lineage, quality scoring, and governed access to enterprise data products.
+          </p>
+        </div>
+
+        <div class="timeline-card glass">
+          <h3>Enterprise AI Product Strategy</h3>
+          <div class="company">AI + Governance Convergence</div>
+          <p>
+            Working on RAG capabilities, enterprise context grounding, MCP integrations, governance guardrails, and scalable enterprise AI workflows.
+          </p>
+        </div>
+
+        <div class="timeline-card glass">
+          <h3>Product Operations & Enablement</h3>
+          <div class="company">Cross-functional Leadership</div>
+          <p>
+            Established product planning principles, roadmap prioritization approaches, enablement strategies, and collaborative frameworks across Product, Engineering, Sales, and Customer Success.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Core Expertise</h2>
+
+      <div class="skills-grid">
+        <div class="skill-card glass">
+          <h4>AI & Emerging Tech</h4>
+          <div class="chip-wrap">
+            <span class="chip">Generative AI</span>
+            <span class="chip">RAG</span>
+            <span class="chip">MCP</span>
+            <span class="chip">AI Governance</span>
+            <span class="chip">LLMs</span>
+            <span class="chip">OpenAI APIs</span>
+          </div>
+        </div>
+
+        <div class="skill-card glass">
+          <h4>Data Governance</h4>
+          <div class="chip-wrap">
+            <span class="chip">Metadata Governance</span>
+            <span class="chip">Data Catalog</span>
+            <span class="chip">Data Quality</span>
+            <span class="chip">Privacy & Compliance</span>
+            <span class="chip">Lineage</span>
+            <span class="chip">Access Control</span>
+          </div>
+        </div>
+
+        <div class="skill-card glass">
+          <h4>Product Leadership</h4>
+          <div class="chip-wrap">
+            <span class="chip">Roadmap Strategy</span>
+            <span class="chip">SAFe</span>
+            <span class="chip">Stakeholder Management</span>
+            <span class="chip">Customer Research</span>
+            <span class="chip">Platform Thinking</span>
+          </div>
+        </div>
+
+        <div class="skill-card glass">
+          <h4>Personal Growth</h4>
+          <div class="chip-wrap">
+            <span class="chip">Executive Presence</span>
+            <span class="chip">Communication</span>
+            <span class="chip">AI Leadership</span>
+            <span class="chip">Product Vision</span>
+            <span class="chip">Strategic Thinking</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Future Vision</h2>
+
+      <div class="vision-board">
+        <div class="vision-card glass">
+          <h3>Enterprise AI Systems</h3>
+          <p>
+            Building trustworthy AI ecosystems that combine governance, semantic context, lineage, and enterprise actions into a unified operational layer.
+          </p>
+        </div>
+
+        <div class="vision-card glass">
+          <h3>Data Product Economy</h3>
+          <p>
+            Transforming enterprise data into discoverable, reusable, and measurable products with governance and quality built directly into workflows.
+          </p>
+        </div>
+
+        <div class="vision-card glass">
+          <h3>Leadership Evolution</h3>
+          <p>
+            Growing into a globally recognized AI Product Leader blending technology depth, product strategy, communication excellenc
