@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>How AI Finds Answers — RAG Explained</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Fraunces:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --cream: #faf7f2;
+  --warm-white: #fff9f3;
+  --sand: #f0e8d8;
+  --border: #e5d9c4;
+  --orange: #f97316;
+  --orange-light: #fff3e8;
+  --orange-mid: #fed7aa;
+  --teal: #0d9488;
+  --teal-light: #e0f5f3;
+  --purple: #7c3aed;
+  --purple-light: #ede9fe;
+  --rose: #e11d48;
+  --rose-light: #fff0f3;
+  --yellow: #d97706;
+  --yellow-light: #fffbeb;
+  --green: #16a34a;
+  --green-light: #f0fdf4;
+  --ink: #1c1917;
+  --body: #44403c;
+  --muted: #78716c;
+  --subtle: #a8a29e;
+  --card-shadow: 0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.05);
+  --card-shadow-hover: 0 8px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--cream);
+  color: var(--body);
+  font-family: 'Nunito', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  min-height: 100vh;
+}
+
+/* Decorative background blobs */
+body::before {
+  content:'';
+  position:fixed;
+  top:-200px; right:-200px;
+  width:600px; height:600px;
+  background: radial-gradient(circle, rgba(249,115,22,0.08) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+body::after {
+  content:'';
+  position:fixed;
+  bottom:-200px; left:-200px;
+  width:500px; height:500px;
+  background: radial-gradient(circle, rgba(13,148,136,0.07) 0%, transparent 70%);
+  pointer-events:none; z-index:0;
+}
+
+.page { position:relative; z-index:1; max-width:860px; margin:0 auto; padding:0 20px 80px; }
+
+/* ── HERO ─────────────────────────────────────────────────────────────────── */
+.hero {
+  text-align:center;
+  padding: 56px 20px 40px;
+}
+.hero-emoji {
+  font-size:56px;
+  display:block;
+  margin-bottom:16px;
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+
+.hero h1 {
+  font-family: 'Fraunces', serif;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.15;
+  margin-bottom: 16px;
+  letter-spacing: -0.5px;
+}
+.hero h1 em {
+  font-style: italic;
+  color: var(--orange);
+}
+.hero-lead {
+  font-size: 18px;
+  color: var(--muted);
+  max-width: 560px;
+  margin: 0 auto 28px;
+}
+.hero-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--orange-light);
+  border: 1.5px solid var(--orange-mid);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--orange);
+  letter-spacing: 0.5px;
+}
+
+/* ── ANALOGY BANNER ───────────────────────────────────────────────────────── */
+.analogy-box {
+  background: linear-gradient(135deg, #fff9f3 0%, #fef3c7 100%);
+  border: 2px solid var(--orange-mid);
+  border-radius: 20px;
+  padding: 28px 32px;
+  margin-bottom: 32px;
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  box-shadow: var(--card-shadow);
+}
+.analogy-icon { font-size: 36px; flex-shrink: 0; margin-top: 2px; }
+.analogy-title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.analogy-text { font-size: 15px; color: var(--body); }
+.analogy-text strong { color: var(--orange); }
+
+/* ── PROGRESS TRAIL ───────────────────────────────────────────────────────── */
+.progress-trail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 32px;
+  padding: 18px 20px;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+}
+.trail-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.trail-step:hover { transform: translateY(-2px); }
+.trail-bubble {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  background: var(--sand);
+  border: 2px solid var(--border);
+  transition: all 0.3s;
+  position: relative;
+}
+.trail-step.done .trail-bubble {
+  background: var(--green-light);
+  border-color: var(--green);
+}
+.trail-step.done .trail-bubble::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--green);
+  background: var(--green-light);
+  border-radius: 50%;
+}
+.trail-step.active .trail-bubble {
+  background: var(--orange);
+  border-color: var(--orange);
+  box-shadow: 0 0 0 4px rgba(249,115,22,0.2);
+  animation: trailPulse 2s infinite;
+}
+@keyframes trailPulse{0%,100%{box-shadow:0 0 0 4px rgba(249,115,22,0.2);}50%{box-shadow:0 0 0 8px rgba(249,115,22,0.1);}}
+.trail-step.active .trail-bubble span { display:none; }
+.trail-step.active .trail-bubble::before { content: attr(data-num); font-size:14px; font-weight:900; color:white; }
+.trail-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+  max-width: 52px;
+}
+.trail-step.done .trail-label { color: var(--green); }
+.trail-step.active .trail-label { color: var(--orange); }
+.trail-arrow { color: var(--border); font-size: 14px; margin-bottom: 18px; }
+
+/* ── STEP CARDS ───────────────────────────────────────────────────────────── */
+.step-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 24px;
+  padding: 36px 40px;
+  margin-bottom: 24px;
+  box-shadow: var(--card-shadow);
+  display: none;
+  animation: slideIn 0.4s cubic-bezier(0.4,0,0.2,1) forwards;
+  position: relative;
+  overflow: hidden;
+}
+.step-card.active { display: block; }
+@keyframes slideIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+
+.step-card::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height:4px;
+  border-radius:24px 24px 0 0;
+}
+.step-card.s0::before { background:linear-gradient(90deg,#f97316,#fb923c); }
+.step-card.s1::before { background:linear-gradient(90deg,#7c3aed,#a855f7); }
+.step-card.s2::before { background:linear-gradient(90deg,#0d9488,#14b8a6); }
+.step-card.s3::before { background:linear-gradient(90deg,#d97706,#f59e0b); }
+.step-card.s4::before { background:linear-gradient(90deg,#e11d48,#f43f5e); }
+.step-card.s5::before { background:linear-gradient(90deg,#2563eb,#3b82f6); }
+.step-card.s6::before { background:linear-gradient(90deg,#16a34a,#22c55e); }
+.step-card.s7::before { background:linear-gradient(90deg,#f97316,#7c3aed); }
+
+/* Step header */
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1.5px solid var(--sand);
+}
+.step-emoji-box {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.s0 .step-emoji-box { background: var(--orange-light); }
+.s1 .step-emoji-box { background: var(--purple-light); }
+.s2 .step-emoji-box { background: var(--teal-light); }
+.s3 .step-emoji-box { background: var(--yellow-light); }
+.s4 .step-emoji-box { background: var(--rose-light); }
+.s5 .step-emoji-box { background: #eff6ff; }
+.s6 .step-emoji-box { background: var(--green-light); }
+.s7 .step-emoji-box { background: linear-gradient(135deg,var(--orange-light),var(--purple-light)); }
+
+.step-meta { flex:1; }
+.step-counter {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.s0 .step-counter { color: var(--orange); }
+.s1 .step-counter { color: var(--purple); }
+.s2 .step-counter { color: var(--teal); }
+.s3 .step-counter { color: var(--yellow); }
+.s4 .step-counter { color: var(--rose); }
+.s5 .step-counter { color: #2563eb; }
+.s6 .step-counter { color: var(--green); }
+.s7 .step-counter { color: var(--orange); }
+
+.step-title {
+  font-family: 'Fraunces', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+/* Explainer box — plain English */
+.explainer {
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  font-size: 15px;
+}
+.explainer-icon { font-size: 22px; flex-shrink:0; margin-top:1px; }
+.explainer p { color: var(--body); }
+.explainer strong { color: var(--ink); }
+.s0 .explainer { background: var(--orange-light); border:1.5px solid var(--orange-mid); }
+.s1 .explainer { background: var(--purple-light); border:1.5px solid #ddd6fe; }
+.s2 .explainer { background: var(--teal-light); border:1.5px solid #99f6e4; }
+.s3 .explainer { background: var(--yellow-light); border:1.5px solid #fde68a; }
+.s4 .explainer { background: var(--rose-light); border:1.5px solid #fecdd3; }
+.s5 .explainer { background: #eff6ff; border:1.5px solid #bfdbfe; }
+.s6 .explainer { background: var(--green-light); border:1.5px solid #bbf7d0; }
+.s7 .explainer { background: linear-gradient(135deg,var(--orange-light),var(--purple-light)); border:1.5px solid var(--orange-mid); }
+
+/* Section labels */
+.section-label {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Inputs */
+textarea, input[type=text] {
+  width: 100%;
+  background: var(--warm-white);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--ink);
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  padding: 14px 16px;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  min-height: 90px;
+}
+textarea:focus, input[type=text]:focus {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(249,115,22,0.12);
+}
+
+/* Docs */
+.doc-list { display:flex; flex-direction:column; gap:10px; margin-bottom:16px; }
+.doc-item {
+  display:flex;
+  align-items:flex-start;
+  gap:12px;
+  background: var(--warm-white);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.doc-item:hover { border-color: var(--orange-mid); box-shadow: var(--card-shadow); }
+.doc-num {
+  width: 28px; height: 28px;
+  background: var(--orange-light);
+  border: 1.5px solid var(--orange-mid);
+  border-radius: 8px;
+  display:flex; align-items:center; justify-content:center;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--orange);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.doc-text { flex:1; font-size:14px; line-height:1.6; color:var(--body); }
+.remove-btn {
+  background: none;
+  border: none;
+  color: var(--subtle);
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 4px;
+  transition: color 0.2s;
+  line-height:1;
+}
+.remove-btn:hover { color: var(--rose); }
+
+.add-row { display:flex; gap:10px; margin-bottom:16px; align-items:flex-start; }
+.add-row textarea { min-height:72px; }
+
+/* Sliders */
+.slider-group { margin-bottom:20px; }
+.slider-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.slider-name { font-weight: 700; font-size: 15px; color: var(--ink); }
+.slider-hint { font-size: 12px; color: var(--muted); margin-bottom:6px; }
+.slider-val {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--purple);
+}
+input[type=range] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--sand);
+  border-radius: 3px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--purple);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(124,58,237,0.3);
+  transition: transform 0.2s;
+}
+input[type=range]::-webkit-slider-thumb:hover { transform:scale(1.15); }
+.slider-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--subtle); margin-top:4px; }
+
+/* Chunks */
+.chunks-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; margin-bottom:16px; }
+.chunk-tile {
+  background: var(--warm-white);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: all 0.2s;
+  position: relative;
+}
+.chunk-tile.top-pick {
+  border-color: var(--teal);
+  background: var(--teal-light);
+}
+.chunk-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--purple-light);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--purple);
+  margin-bottom: 8px;
+}
+.chunk-tag.picked { background:var(--teal-light); color:var(--teal); }
+.chunk-body { font-size: 13px; color: var(--body); line-height: 1.6; }
+
+/* Vector visual — friendly grid */
+.vec-card {
+  background: var(--warm-white);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+.vec-label { font-size:12px; font-weight:700; color:var(--muted); margin-bottom:10px; }
+.vec-dots { display:flex; flex-wrap:wrap; gap:4px; }
+.vec-dot {
+  width: 10px; height: 10px;
+  border-radius: 3px;
+  transition: all 0.4s;
+}
+
+/* Similarity visual */
+.sim-card {
+  background: var(--warm-white);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 10px;
+  transition: all 0.3s;
+}
+.sim-card.winner {
+  border-color: var(--teal);
+  background: var(--teal-light);
+  box-shadow: 0 4px 16px rgba(13,148,136,0.15);
+}
+.sim-row {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom: 10px;
+}
+.sim-snippet { font-size:13px; color:var(--body); line-height:1.5; flex:1; margin-right:12px; }
+.sim-pct {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 700;
+  flex-shrink:0;
+}
+.sim-card.winner .sim-pct { color:var(--teal); }
+.sim-bar-bg { height:8px; background:var(--sand); border-radius:4px; overflow:hidden; }
+.sim-bar-fill { height:100%; border-radius:4px; background:linear-gradient(90deg,var(--purple),var(--teal)); transition:width 1s cubic-bezier(0.4,0,0.2,1); }
+.sim-card.winner .sim-bar-fill { background:linear-gradient(90deg,var(--teal),#34d399); }
+.top-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  background:var(--teal); color:white;
+  border-radius:6px; padding:2px 8px;
+  font-size:11px; font-weight:800;
+  margin-top:8px;
+}
+
+/* Prompt box */
+.prompt-section {
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1.5px solid;
+}
+.prompt-header {
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  display:flex; align-items:center; gap:6px;
+}
+.prompt-body { padding: 12px 14px; font-size:14px; line-height:1.7; }
+.ps-system { border-color:#fde68a; }
+.ps-system .prompt-header { background:#fef3c7; color:var(--yellow); }
+.ps-system .prompt-body { background:#fffbeb; color:var(--body); }
+.ps-context { border-color:#ddd6fe; }
+.ps-context .prompt-header { background:var(--purple-light); color:var(--purple); }
+.ps-context .prompt-body { background:#f5f3ff; color:var(--body); }
+.ps-query { border-color:var(--orange-mid); }
+.ps-query .prompt-header { background:var(--orange-light); color:var(--orange); }
+.ps-query .prompt-body { background:#fff7ed; color:var(--body); font-weight:700; }
+
+/* Answer */
+.answer-box {
+  background: linear-gradient(135deg, #f0fdf4, #fffbeb);
+  border: 2px solid #bbf7d0;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
+  position:relative;
+}
+.answer-box::before {
+  content:'💬';
+  position:absolute; top:-14px; left:20px;
+  font-size:24px;
+  background:white; border-radius:50%;
+  width:36px; height:36px;
+  display:flex; align-items:center; justify-content:center;
+  border:2px solid #bbf7d0;
+}
+.answer-text { font-size:16px; line-height:1.8; color:var(--ink); padding-top:4px; }
+.citation-chip {
+  display:inline-flex; align-items:center;
+  background:var(--teal-light); border:1px solid #99f6e4;
+  border-radius:5px; padding:1px 7px;
+  font-size:11px; font-weight:800; color:var(--teal);
+  margin:0 2px; cursor:default;
+}
+.typing-cursor {
+  display:inline-block; width:2px; height:16px;
+  background:var(--green); border-radius:1px;
+  animation:blink 1s infinite; margin-left:2px; vertical-align:middle;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* Buttons */
+.btn {
+  display:inline-flex; align-items:center; gap:8px;
+  padding: 13px 26px;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  letter-spacing: 0.2px;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0); }
+
+.btn-next {
+  background: var(--orange);
+  color: white;
+  box-shadow: 0 4px 16px rgba(249,115,22,0.35);
+}
+.btn-next:hover { background:#ea6c0a; box-shadow:0 6px 24px rgba(249,115,22,0.45); }
+
+.btn-back {
+  background: var(--sand);
+  color: var(--muted);
+  border: 1.5px solid var(--border);
+}
+.btn-back:hover { background:var(--border); color:var(--body); }
+
+.btn-add {
+  background: var(--purple-light);
+  color: var(--purple);
+  border: 1.5px solid #ddd6fe;
+  font-size:14px; padding:10px 18px;
+}
+.btn-add:hover { background:#ede9fe; }
+
+.btn-restart {
+  background: var(--sand);
+  color: var(--body);
+  border:1.5px solid var(--border);
+  font-size:14px;
+}
+.btn-restart:hover { background:var(--border); }
+
+.btn-query {
+  background: var(--rose-light);
+  color: var(--rose);
+  border:1.5px solid #fecdd3;
+  font-size:14px;
+}
+.btn-query:hover { background:#ffe4e6; }
+
+.btn-actions {
+  display:flex; align-items:center;
+  justify-content:space-between;
+  margin-top:32px; gap:12px; flex-wrap:wrap;
+  padding-top:24px;
+  border-top:1.5px solid var(--sand);
+}
+
+/* Sample queries */
+.samples { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; margin-bottom:4px; }
+.sample-btn {
+  background: var(--rose-light);
+  border: 1.5px solid #fecdd3;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--rose);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.sample-btn:hover { background:#ffe4e6; transform:translateY(-1px); }
+
+/* Fun fact pills */
+.fun-fact {
+  display:flex; align-items:flex-start; gap:10px;
+  background: var(--yellow-light);
+  border: 1.5px solid #fde68a;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size:14px; color:var(--body);
+  margin-top:16px;
+}
+.fun-fact-icon { font-size:18px; flex-shrink:0; }
+
+/* Loading */
+.loading-state {
+  display:flex; align-items:center; gap:14px;
+  padding:20px; background:var(--warm-white);
+  border:2px solid var(--border); border-radius:14px;
+  font-size:15px; color:var(--muted); font-weight:600;
+  margin-bottom:16px;
+}
+.spinner {
+  width:24px; height:24px;
+  border:3px solid var(--sand);
+  border-top-color:var(--orange);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+  flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* Concept section at bottom */
+.concepts-section { margin-top:40px; }
+.concepts-title {
+  font-family:'Fraunces',serif;
+  font-size:28px; font-weight:700;
+  color:var(--ink); text-align:center;
+  margin-bottom:8px;
+}
+.concepts-lead { text-align:center; color:var(--muted); font-size:15px; margin-bottom:24px; }
+.concepts-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+.concept-card {
+  background:white;
+  border:1.5px solid var(--border);
+  border-radius:18px;
+  padding:22px;
+  box-shadow:var(--card-shadow);
+  transition:all 0.2s;
+}
+.concept-card:hover { transform:translateY(-4px); box-shadow:var(--card-shadow-hover); }
+.concept-emoji { font-size:28px; margin-bottom:10px; }
+.concept-name { font-family:'Fraunces',serif; font-size:17px; font-weight:700; color:var(--ink); margin-bottom:6px; }
+.concept-def { font-size:14px; color:var(--muted); line-height:1.6; }
+.concept-card .analogy { font-size:13px; color:var(--orange); font-weight:700; margin-top:8px; }
+
+/* Chunk count badge */
+.count-badge {
+  display:inline-flex; align-items:center; gap:4px;
+  background:var(--purple-light); border:1.5px solid #ddd6fe;
+  border-radius:8px; padding:4px 10px;
+  font-size:13px; font-weight:800; color:var(--purple);
+  margin-bottom:12px;
+}
+
+/* Hint text */
+.hint { font-size:13px; color:var(--subtle); font-style:italic; margin-top:6px; }
+
+/* Vector legend */
+.vec-legend { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; font-size:12px; }
+.vec-legend-item { display:flex; align-items:center; gap:5px; color:var(--muted); font-weight:700; }
+.vec-swatch { width:12px; height:12px; border-radius:3px; }
+
+/* Store summary */
+.store-summary {
+  background:var(--green-light);
+  border:2px solid #bbf7d0;
+  border-radius:14px;
+  padding:18px 20px;
+  margin-bottom:20px;
+  display:flex; align-items:center; gap:14px;
+  font-size:15px; color:var(--green); font-weight:700;
+}
+.store-icon { font-size:28px; }
+
+/* Success tick */
+.step-done-banner {
+  background:var(--green-light);
+  border:2px solid #bbf7d0;
+  border-radius:12px;
+  padding:14px 18px;
+  display:flex; align-items:center; gap:10px;
+  font-size:14px; color:var(--green); font-weight:700;
+  margin-top:16px;
+}
+
+.hidden { display:none !important; }
+
+/* Mobile tweaks */
+@media(max-width:600px){
+  .step-card { padding:24px 20px; }
+  .hero h1 { font-size:28px; }
+  .analogy-box { flex-direction:column; gap:12px; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HERO -->
+  <header class="hero">
+    <span class="hero-emoji">🧠</span>
+    <h1>How does AI find the<br/><em>right answer</em> for you?</h1>
+    <p class="hero-lead">This interactive guide walks you through exactly how modern AI systems look up information before answering your questions — no tech knowledge needed!</p>
+    <div class="hero-tag">🎮 Interactive Simulation · 8 Easy Steps</div>
+  </header>
+
+  <!-- ANALOGY -->
+  <div class="analogy-box">
+    <div class="analogy-icon">📚</div>
+    <div>
+      <div class="analogy-title">Think of it like a very smart librarian</div>
+      <div class="analogy-text">
+        Imagine you ask a librarian a question. Instead of guessing, they <strong>rush to the shelves, find the most relevant books, read the right pages</strong>, and then give you a clear answer — <strong>citing exactly where they found it</strong>. That's exactly what RAG (Retrieval-Augmented Generation) does for AI!
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS TRAIL -->
+  <div class="progress-trail" id="progressTrail">
+    <div class="trail-step active" data-step="0" data-num="1" onclick="goToStep(0)">
+      <div class="trail-bubble" data-num="1"><span>📚</span></div>
+      <div class="trail-label">Your Docs</div>
+    </div>
+    <div class="trail-arrow">›</div>
+    <div class="trail-step" data-step="1" onclick="goToStep(1)">
+      <div class="trail-bubble" data-num="2"><span>✂️</span></div>
+      <div class="trail-label">Split Up</div>
+    </div>
+    <div class="trail-arrow">›</div>
+    <div class="trail-step" data-step="2" onclick="goToStep(2)">
+      <div class="trail-bubble" data-num="3"><span>🎨</span></div>
+      <div class="trail-label">Fingerprints</div>
+    </div>
+    <div class="trail-arrow">›</div>
+    <div class="trail-step" data-step="3" onclick="goToStep(3)">
+      <div class="trail-bubble" data-num="4"><span>📦</span></div>
+      <div class="trail-label">Library</div>
+    </div>
+    <div class="trail-arrow">›</div>
+    <div class="trail-step" data-step="4" onclick="goToStep(4)">
+      <div class="trail-bubble" data-num="5"><span>❓</span></div>
+      <div class="trail-label">Your Question</div>
+    </div>
+    <div class="trail-arrow">›</div>
+    <div class="trail-step" data-step="5" onclick="goToStep(5)">
+      <div class="trail-bubble" data-num="6"><span>🔍</span></div>
+      <div class="trail-label">Best Match</div>
+    </div>
+    <div class="trail-arrow">›</div>
+    <div class="trail-step" data-step="6" onclick="goToStep(6)">
+      <div class="trail-bubble" data-num="7"><span>📋</span></div>
+      <div class="trail-label">Build Brief</div>
+    </div>
+    <div class="trail-arrow">›</div>
+    <div class="trail-step" data-step="7" onclick="goToStep(7)">
+      <div class="trail-bubble" data-num="8"><span>✨</span></div>
+      <div class="trail-label">AI Answers</div>
+    </div>
+  </div>
+
+  <!-- ════ STEP 1: Corpus ════ -->
+  <div class="step-card s0 active" id="step-0">
+    <div class="step-header">
+      <div class="step-emoji-box">📚</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 1 of 8 · Your Knowledge Source</div>
+        <div class="step-title">Feed the AI your documents</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>Before AI can answer anything, it needs <strong>your documents to learn from</strong>. Think of these like the books in your personal library. The AI won't use the internet — it only uses what you give it here.<br/><br/>We've loaded some example documents about AI for you. Feel free to <strong>edit, remove, or add your own!</strong></p>
+    </div>
+
+    <div class="section-label">📄 Your Documents</div>
+    <div class="doc-list" id="docList"></div>
+
+    <div class="add-row">
+      <textarea id="newDocText" placeholder="✏️ Type or paste your own text here — could be notes, an article, anything!"></textarea>
+    </div>
+    <button class="btn btn-add" onclick="addDoc()">➕ Add This Document</button>
+
+    <div class="fun-fact">
+      <span class="fun-fact-icon">🌟</span>
+      <span><strong>Real-world example:</strong> A company might feed in their employee handbook, product manuals, or past support tickets — so their AI chatbot only answers from <em>that</em> knowledge.</span>
+    </div>
+
+    <div class="btn-actions">
+      <div></div>
+      <button class="btn btn-next" onclick="nextStep(0)">Next: Split Into Pieces ✂️</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 2: Chunking ════ -->
+  <div class="step-card s1" id="step-1">
+    <div class="step-header">
+      <div class="step-emoji-box">✂️</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 2 of 8 · Chunking</div>
+        <div class="step-title">Cutting documents into bite-sized pieces</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>Imagine trying to search through a huge book — it's slow and messy. Instead, the AI <strong>cuts each document into smaller chunks</strong>, like tearing pages into index cards. Each card covers one topic, making it easy to find the right one later.<br/><br/><strong>Overlap</strong> means each card shares a little text with the next one, so no information falls through the cracks.</p>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-name">📏 Chunk Size</span>
+        <span class="slider-val" id="chunkSizeVal">150</span>
+      </div>
+      <div class="slider-hint">How many characters fit on each "index card". Smaller = more cards, each very focused. Larger = fewer cards, each covers more ground.</div>
+      <input type="range" id="chunkSize" min="60" max="400" value="150" oninput="onSliderChange()"/>
+      <div class="slider-labels"><span>📌 Very focused</span><span>📖 Broader context</span></div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <span class="slider-name">🔗 Overlap</span>
+        <span class="slider-val" id="overlapVal">20</span>
+      </div>
+      <div class="slider-hint">How many characters are shared between neighbouring chunks. Overlap prevents ideas from being split awkwardly.</div>
+      <input type="range" id="overlapSize" min="0" max="80" value="20" oninput="onSliderChange()"/>
+      <div class="slider-labels"><span>No overlap</span><span>Big overlap</span></div>
+    </div>
+
+    <div class="count-badge" id="chunkBadge">✂️ 0 chunks created</div>
+    <div class="chunks-grid" id="chunksGrid"></div>
+    <p class="hint">💡 Try dragging the sliders and watch how the chunks change!</p>
+
+    <div class="btn-actions">
+      <button class="btn btn-back" onclick="prevStep(1)">← Back</button>
+      <button class="btn btn-next" onclick="nextStep(1)">Next: Create Fingerprints 🎨</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 3: Embedding ════ -->
+  <div class="step-card s2" id="step-2">
+    <div class="step-header">
+      <div class="step-emoji-box">🎨</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 3 of 8 · Embeddings</div>
+        <div class="step-title">Giving each chunk a unique "fingerprint"</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>Here's the magic step! The AI reads each chunk and converts it into a <strong>list of numbers called an embedding</strong> — think of it like a unique colour fingerprint for that text.<br/><br/>Chunks with <strong>similar meaning</strong> get <strong>similar fingerprints</strong>. So "dog" and "puppy" would have very similar number patterns, while "dog" and "bicycle" would look very different. This is how the AI understands <em>meaning</em>, not just keywords!</p>
+    </div>
+
+    <div class="vec-legend">
+      <span class="vec-legend-item"><span class="vec-swatch" style="background:#f97316"></span>High value</span>
+      <span class="vec-legend-item"><span class="vec-swatch" style="background:#fde68a"></span>Medium</span>
+      <span class="vec-legend-item"><span class="vec-swatch" style="background:#e5d9c4"></span>Low value</span>
+    </div>
+
+    <div class="section-label">🎨 Chunk Fingerprints (each row = one chunk)</div>
+    <div id="vectorGrid" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+
+    <div class="fun-fact">
+      <span class="fun-fact-icon">🤓</span>
+      <span><strong>Fun fact:</strong> Real AI embeddings use <em>thousands</em> of numbers per chunk! We're showing 16 here to keep it visual. The concept is identical — more dimensions just means more nuance.</span>
+    </div>
+
+    <div class="btn-actions">
+      <button class="btn btn-back" onclick="prevStep(2)">← Back</button>
+      <button class="btn btn-next" onclick="nextStep(2)">Next: Build the Library 📦</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 4: Vector Store ════ -->
+  <div class="step-card s3" id="step-3">
+    <div class="step-header">
+      <div class="step-emoji-box">📦</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 4 of 8 · Vector Store</div>
+        <div class="step-title">Filing everything into the AI's library</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>All the chunks and their fingerprints are now <strong>saved into a special database called a vector store</strong>. Think of it as a perfectly organised filing cabinet where every folder is labelled with its fingerprint.<br/><br/>When a question comes in, the AI can scan this cabinet <strong>instantly</strong> — even if there are millions of documents!</p>
+    </div>
+
+    <div class="store-summary">
+      <span class="store-icon">✅</span>
+      <span id="storeSummary">Loading...</span>
+    </div>
+
+    <div class="section-label">🗂️ Filed Chunks</div>
+    <div class="chunks-grid" id="storeGrid"></div>
+
+    <div class="fun-fact">
+      <span class="fun-fact-icon">🏢</span>
+      <span><strong>In real life:</strong> Companies use vector stores like Pinecone, Weaviate, or pgvector to store millions of document embeddings — enabling lightning-fast semantic search.</span>
+    </div>
+
+    <div class="btn-actions">
+      <button class="btn btn-back" onclick="prevStep(3)">← Back</button>
+      <button class="btn btn-next" onclick="nextStep(3)">Next: Ask Your Question ❓</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 5: Query ════ -->
+  <div class="step-card s4" id="step-4">
+    <div class="step-header">
+      <div class="step-emoji-box">❓</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 5 of 8 · Your Question</div>
+        <div class="step-title">Ask anything about your documents</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>Now it's your turn! Type any question you'd like the AI to answer. Your question will go through the <strong>exact same fingerprinting process</strong> as the chunks — so it can be compared to them fairly.<br/><br/>The AI doesn't search for <em>exact words</em>. It searches for <em>similar meaning</em>. So asking "How does AI avoid making things up?" will find chunks about "reducing hallucinations" even without using those exact words!</p>
+    </div>
+
+    <div class="section-label">💬 Your Question</div>
+    <textarea id="userQuery" rows="3" placeholder="Type your question here..."></textarea>
+
+    <div class="section-label" style="margin-top:16px;">⚡ Quick examples — click to try!</div>
+    <div class="samples">
+      <button class="sample-btn" onclick="setSample(this)">How does RAG reduce hallucinations?</button>
+      <button class="sample-btn" onclick="setSample(this)">What are embeddings used for?</button>
+      <button class="sample-btn" onclick="setSample(this)">How does semantic search work?</button>
+      <button class="sample-btn" onclick="setSample(this)">Why is chunking important?</button>
+      <button class="sample-btn" onclick="setSample(this)">What is a vector database?</button>
+    </div>
+
+    <div class="btn-actions">
+      <button class="btn btn-back" onclick="prevStep(4)">← Back</button>
+      <button class="btn btn-next" onclick="nextStep(4)">Next: Find Best Match 🔍</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 6: Retrieval ════ -->
+  <div class="step-card s5" id="step-5">
+    <div class="step-header">
+      <div class="step-emoji-box">🔍</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 6 of 8 · Semantic Retrieval</div>
+        <div class="step-title">Finding the most relevant chunks</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>The AI compares your question's fingerprint to every chunk's fingerprint using <strong>cosine similarity</strong> — a fancy name for measuring "how alike are these two patterns?"<br/><br/>It scores every chunk from <strong>0% (totally unrelated)</strong> to <strong>100% (perfect match)</strong>, then picks the <strong>top 3 most relevant chunks</strong> to use as context. The higher the bar, the better the match!</p>
+    </div>
+
+    <div class="section-label">📊 Relevance Scores — Your Question vs. Every Chunk</div>
+    <div id="simList"></div>
+
+    <div class="fun-fact">
+      <span class="fun-fact-icon">📐</span>
+      <span><strong>Why "cosine" similarity?</strong> Imagine each fingerprint as an arrow pointing in a direction in space. Cosine similarity measures how closely two arrows point the same way — if they're parallel, they're a perfect match!</span>
+    </div>
+
+    <div class="btn-actions">
+      <button class="btn btn-back" onclick="prevStep(5)">← Back</button>
+      <button class="btn btn-next" onclick="nextStep(5)">Next: Build the Brief 📋</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 7: Augment ════ -->
+  <div class="step-card s6" id="step-6">
+    <div class="step-header">
+      <div class="step-emoji-box">📋</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 7 of 8 · Prompt Augmentation</div>
+        <div class="step-title">Writing the AI's cheat sheet</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>Before the AI writes its answer, it gets a <strong>carefully prepared briefing document</strong> — like a cheat sheet written just for your question. This briefing contains three parts:<br/>
+      <strong>① Instructions</strong> — how to behave and cite sources<br/>
+      <strong>② Context</strong> — the top matching chunks from your documents<br/>
+      <strong>③ Your Question</strong> — clearly stated at the end<br/><br/>
+      This is the "augmented" prompt — your question <em>augmented</em> with real facts!</p>
+    </div>
+
+    <div class="section-label">📄 The AI's Briefing Document</div>
+    <div id="promptBox"></div>
+
+    <div class="fun-fact">
+      <span class="fun-fact-icon">🎯</span>
+      <span><strong>This is the key insight of RAG:</strong> Instead of asking the AI to "remember" facts from training, we <em>hand it the facts</em> right before it answers. That's why it's called Retrieval-<em>Augmented</em> Generation.</span>
+    </div>
+
+    <div class="btn-actions">
+      <button class="btn btn-back" onclick="prevStep(6)">← Back</button>
+      <button class="btn btn-next" onclick="nextStep(6)">✨ Get the AI's Answer!</button>
+    </div>
+  </div>
+
+  <!-- ════ STEP 8: Generate ════ -->
+  <div class="step-card s7" id="step-7">
+    <div class="step-header">
+      <div class="step-emoji-box">✨</div>
+      <div class="step-meta">
+        <div class="step-counter">Step 8 of 8 · AI Generation</div>
+        <div class="step-title">The AI writes its answer!</div>
+      </div>
+    </div>
+
+    <div class="explainer">
+      <div class="explainer-icon">💡</div>
+      <p>Finally! The AI reads the briefing document and writes a clear answer — using <strong>only the facts from your documents</strong>. It cites where each piece of information came from, just like a good essay. No guessing, no making things up!</p>
+    </div>
+
+    <div id="genLoading" class="loading-state hidden">
+      <div class="spinner"></div>
+      <span>🤔 The AI is reading your documents and writing an answer...</span>
+    </div>
+
+    <div id="responseArea" class="hidden">
+      <div class="section-label">💬 AI's Answer (based only on your documents)</div>
+      <div class="answer-box">
+        <div class="answer-text" id="responseText"></div>
+      </div>
+
+      <div class="section-label">📚 Sources Used</div>
+      <div class="chunks-grid" id="sourcesGrid"></div>
+
+      <div class="step-done-banner">
+        🎉 That's how RAG works! The AI answered using only what you gave it — no guessing needed.
+      </div>
+    </div>
+
+    <div class="btn-actions" style="margin-top:24px;">
+      <button class="btn btn-back" onclick="prevStep(7)">← Back</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-query" onclick="tryAnotherQuery()">🔄 Try Another Question</button>
+        <button class="btn btn-restart" onclick="startOver()">↺ Start Over</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ CONCEPTS GLOSSARY ════ -->
+  <div class="concepts-section">
+    <div class="concepts-title">📖 Plain-English Glossary</div>
+    <div class="concepts-lead">The jargon, explained in human language</div>
+    <div class="concepts-grid">
+      <div class="concept-card">
+        <div class="concept-emoji">🔢</div>
+        <div class="concept-name">Embedding</div>
+        <div class="concept-def">A list of numbers that represents the <em>meaning</em> of a piece of text. Similar meanings produce similar numbers.</div>
+        <div class="analogy">Like a fingerprint — unique, but similar things look similar.</div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-emoji">📐</div>
+        <div class="concept-name">Cosine Similarity</div>
+        <div class="concept-def">A way to measure how "alike" two embeddings are, on a scale from 0 (nothing in common) to 1 (identical meaning).</div>
+        <div class="analogy">Like checking if two arrows point the same direction.</div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-emoji">✂️</div>
+        <div class="concept-name">Chunking</div>
+        <div class="concept-def">Breaking long documents into smaller, focused pieces so the AI can find and use just the relevant part.</div>
+        <div class="analogy">Like cutting a book into index cards, one topic each.</div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-emoji">🗄️</div>
+        <div class="concept-name">Vector Store</div>
+        <div class="concept-def">A special database that stores text alongside its numerical fingerprint, enabling super-fast meaning-based search.</div>
+        <div class="analogy">A perfectly organised filing cabinet you can search by idea, not just keyword.</div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-emoji">🛡️</div>
+        <div class="concept-name">Hallucination</div>
+        <div class="concept-def">When an AI confidently makes up information that isn't true, because it's guessing from training data rather than real sources.</div>
+        <div class="analogy">Like a student bluffing an exam answer instead of looking it up.</div>
+      </div>
+      <div class="concept-card">
+        <div class="concept-emoji">🧠</div>
+        <div class="concept-name">RAG</div>
+        <div class="concept-def">Retrieval-Augmented Generation. An AI technique that <em>looks things up</em> before answering, dramatically reducing errors.</div>
+        <div class="analogy">Like giving the AI an open-book exam instead of testing its memory.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end .page -->
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const state = {
+  docs: [
+    "RAG stands for Retrieval-Augmented Generation. It helps AI systems look up information from documents before generating an answer, rather than relying on memory alone.",
+    "Embeddings are lists of numbers that represent the meaning of text. Two pieces of text with similar meanings will have very similar embedding numbers, even if the exact words are different.",
+    "Cosine similarity is a mathematical way to measure how alike two embeddings are. A score of 1.0 means the meanings are identical. A score of 0.0 means they share nothing in common.",
+    "Chunking is the process of splitting long documents into smaller pieces. Each chunk covers one idea, making it easy to find the right piece when answering a specific question.",
+    "A vector store is a special database that saves text alongside its numerical fingerprint. This allows the AI to search millions of pieces of text almost instantly by meaning, not just keywords.",
+    "AI hallucinations happen when a model generates incorrect information confidently. RAG dramatically reduces hallucinations because the AI reads real source material before answering."
+  ],
+  chunks: [],
+  embeddings: [],
+  query: '',
+  queryEmbedding: [],
+  similarities: [],
+  topK: 3,
+  currentStep: 0,
+  maxUnlocked: 0
+};
+
+// ─── Vocab for embedding simulation ──────────────────────────────────────────
+const VOCAB = ["rag","retrieval","augmented","generation","embedding","vector","cosine","similarity","chunk","document","context","llm","semantic","database","query","answer","hallucination","grounded","dense","dimension","index","search","prompt","model","text","language","knowledge","base","score","angle","meaning","number","fingerprint","similar","split","piece","store","ai","artificial","intelligence","memory","information","source","cite","accurate","error","guess","fact","real"];
+
+function textToVector(text) {
+  const lower = text.toLowerCase();
+  const words = lower.split(/\W+/).filter(Boolean);
+  const vec = new Array(16).fill(0);
+  words.forEach(w => {
+    let h = 0;
+    for (let i = 0; i < w.length; i++) h = (h * 31 + w.charCodeAt(i)) & 0xffffffff;
+    const idx = Math.abs(h) % 16;
+    const idx2 = Math.abs(h >> 4) % 16;
+    const val = 0.3 + (Math.abs(h) % 100) / 140;
+    vec[idx] += val;
+    vec[idx2] += val * 0.5;
+    const vi = VOCAB.indexOf(w);
+    if (vi >= 0) { vec[vi % 16] += 1.4; vec[(vi+8)%16] += 0.7; }
+  });
+  const mag = Math.sqrt(vec.reduce((s,v)=>s+v*v,0)) || 1;
+  return vec.map(v => v / mag);
+}
+
+function cosineSim(a, b) {
+  let dot = 0, magA = 0, magB = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i]*b[i]; magA += a[i]*a[i]; magB += b[i]*b[i]; }
+  return dot / (Math.sqrt(magA) * Math.sqrt(magB) || 1);
+}
+
+function chunkText(text, size, overlap) {
+  const chunks = []; let i = 0;
+  while (i < text.length) {
+    const piece = text.slice(i, i + size);
+    if (piece.trim().length > 15) chunks.push(piece);
+    i += size - overlap;
+    if (i >= text.length) break;
+  }
+  return chunks;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── Navigation ──────────────────────────────────────────────────────────────
+function goToStep(n) {
+  if (n > state.maxUnlocked) return;
+  state.currentStep = n;
+  document.querySelectorAll('.step-card').forEach((c,i) => c.classList.toggle('active', i===n));
+  document.querySelectorAll('.trail-step').forEach((t,i) => {
+    t.classList.remove('active','done');
+    if (i === n) t.classList.add('active');
+    else if (i < n) t.classList.add('done');
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function nextStep(from) {
+  if (!processStep(from)) return;
+  state.maxUnlocked = Math.max(state.maxUnlocked, from+1);
+  goToStep(from+1);
+}
+function prevStep(from) { goToStep(from-1); }
+
+// ─── Step processors ─────────────────────────────────────────────────────────
+function processStep(step) {
+  if (step===0) return doCorpus();
+  if (step===1) return doChunking();
+  if (step===2) return doEmbedding();
+  if (step===3) return doVectorStore();
+  if (step===4) return doQuery();
+  if (step===5) return doRetrieval();
+  if (step===6) return doAugment();
+  if (step===7) return doGenerate();
+  return true;
+}
+
+// Step 1 ──────────────────────────────────────────────────────────────────────
+function renderDocList() {
+  document.getElementById('docList').innerHTML = state.docs.map((d,i)=>`
+    <div class="doc-item">
+      <div class="doc-num">${i+1}</div>
+      <div class="doc-text">${esc(d)}</div>
+      <button class="remove-btn" onclick="removeDoc(${i})" title="Remove">✕</button>
+    </div>`).join('');
+}
+function addDoc() {
+  const v = document.getElementById('newDocText').value.trim();
+  if (!v) { alert('Please type something first!'); return; }
+  state.docs.push(v);
+  document.getElementById('newDocText').value = '';
+  renderDocList();
+}
+function removeDoc(i) {
+  if (state.docs.length <= 1) { alert('Keep at least one document!'); return; }
+  state.docs.splice(i,1); renderDocList();
+}
+function doCorpus() {
+  if (!state.docs.length) { alert('Add at least one document first!'); return false; }
+  return true;
+}
+
+// Step 2 ──────────────────────────────────────────────────────────────────────
+function onSliderChange() {
+  document.getElementById('chunkSizeVal').textContent = document.getElementById('chunkSize').value;
+  document.getElementById('overlapVal').textContent = document.getElementById('overlapSize').value;
+  buildChunks();
+}
+function buildChunks() {
+  const size = +document.getElementById('chunkSize').value;
+  const overlap = +document.getElementById('overlapSize').value;
+  state.chunks = [];
+  state.docs.forEach((doc,di) => {
+    chunkText(doc, size, overlap).forEach((t,pi) => state.chunks.push({text:t, docIdx:di, idx:pi}));
+  });
+  document.getElementById('chunkBadge').textContent = `✂️ ${state.chunks.length} chunk${state.chunks.length!==1?'s':''} created from ${state.docs.length} document${state.docs.length!==1?'s':''}`;
+  document.getElementById('chunksGrid').innerHTML = state.chunks.map((c,i)=>`
+    <div class="chunk-tile">
+      <div class="chunk-tag">Piece ${i+1} · Doc ${c.docIdx+1}</div>
+      <div class="chunk-body">${esc(c.text)}</div>
+    </div>`).join('');
+}
+function doChunking() {
+  buildChunks();
+  if (!state.chunks.length) { alert('No chunks created. Try a larger chunk size!'); return false; }
+  return true;
+}
+
+// Step 3 ──────────────────────────────────────────────────────────────────────
+function doEmbedding() {
+  state.embeddings = state.chunks.map(c => textToVector(c.text));
+  const colors = ['#f97316','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#ef4444',
+                  '#84cc16','#06b6d4','#a855f7','#f43f5e','#22c55e','#eab308','#6366f1','#fb923c'];
+  document.getElementById('vectorGrid').innerHTML = state.embeddings.map((vec,i)=>{
+    const max = Math.max(...vec);
+    const dots = vec.map((v,j)=>{
+      const intensity = v/max;
+      const col = intensity > 0.6 ? colors[j%colors.length] : intensity > 0.3 ? '#fde68a' : '#e5d9c4';
+      return `<div class="vec-dot" title="Dim ${j+1}: ${v.toFixed(3)}" style="background:${col};opacity:${0.3+intensity*0.7};width:${8+intensity*10}px;height:${8+intensity*10}px;border-radius:3px;"></div>`;
+    }).join('');
+    return `<div class="vec-card">
+      <div class="vec-label">Piece ${i+1}: "${esc(state.chunks[i].text.slice(0,45))}…"</div>
+      <div class="vec-dots">${dots}</div>
+    </div>`;
+  }).join('');
+  return true;
+}
+
+// Step 4 ──────────────────────────────────────────────────────────────────────
+function doVectorStore() {
+  document.getElementById('storeSummary').textContent =
+    `${state.chunks.length} pieces saved with their fingerprints — ready for instant search!`;
+  document.getElementById('storeGrid').innerHTML = state.chunks.map((c,i)=>`
+    <div class="chunk-tile">
+      <div class="chunk-tag">📌 Piece ${i+1}</div>
+      <div class="chunk-body">${esc(c.text.slice(0,90))}${c.text.length>90?'…':''}</div>
+    </div>`).join('');
+  return true;
+}
+
+// Step 5 ──────────────────────────────────────────────────────────────────────
+function setSample(el) { document.getElementById('userQuery').value = el.textContent; }
+function doQuery() {
+  const q = document.getElementById('userQuery').value.trim();
+  if (!q) { alert('Please type a question first!'); return false; }
+  state.query = q;
+  state.queryEmbedding = textToVector(q);
+  return true;
+}
+
+// Step 6 ──────────────────────────────────────────────────────────────────────
+function doRetrieval() {
+  state.similarities = state.chunks.map((c,i)=>({
+    idx:i, text:c.text,
+    score: cosineSim(state.queryEmbedding, state.embeddings[i])
+  })).sort((a,b)=>b.score-a.score);
+
+  document.getElementById('simList').innerHTML = state.similarities.map((s,rank)=>{
+    const isTop = rank < state.topK;
+    const pct = Math.round(s.score * 100);
+    const friendly = pct >= 70 ? '🟢 Great match' : pct >= 45 ? '🟡 Decent match' : '🔴 Weak match';
+    return `<div class="sim-card ${isTop?'winner':''}">
+      <div class="sim-row">
+        <div class="sim-snippet">${esc(s.text.slice(0,80))}${s.text.length>80?'…':''}</div>
+        <div class="sim-pct">${pct}%</div>
+      </div>
+      <div class="sim-bar-bg"><div class="sim-bar-fill" style="width:0%" data-pct="${pct}"></div></div>
+      <div style="margin-top:6px;font-size:12px;color:var(--muted);">${friendly}${isTop?`<span class="top-badge">✓ Selected — Top ${state.topK}</span>`:''}</div>
+    </div>`;
+  }).join('');
+
+  // animate bars
+  setTimeout(()=>{
+    document.querySelectorAll('.sim-bar-fill').forEach(bar => {
+      bar.style.width = bar.dataset.pct + '%';
+    });
+  }, 100);
+  return true;
+}
+
+// Step 7 ──────────────────────────────────────────────────────────────────────
+function doAugment() {
+  const top = state.similarities.slice(0, state.topK);
+  const contextText = top.map((s,i)=>`[Source ${i+1}]: ${s.text}`).join('\n\n');
+  document.getElementById('promptBox').innerHTML = `
+    <div class="prompt-section ps-system">
+      <div class="prompt-header">① Instructions for the AI</div>
+      <div class="prompt-body">You are a helpful assistant. Answer the user's question using ONLY the provided sources below. At the end of each sentence, cite which source you used like this: [Source 1]. If the answer isn't in the sources, say so honestly.</div>
+    </div>
+    <div class="prompt-section ps-context">
+      <div class="prompt-header">② Context — Top ${state.topK} Matching Pieces from Your Documents</div>
+      <div class="prompt-body" style="white-space:pre-wrap;">${esc(contextText)}</div>
+    </div>
+    <div class="prompt-section ps-query">
+      <div class="prompt-header">③ Your Question</div>
+      <div class="prompt-body">${esc(state.query)}</div>
+    </div>`;
+  return true;
+}
+
+// Step 8 ──────────────────────────────────────────────────────────────────────
+function doGenerate() {
+  document.getElementById('genLoading').classList.remove('hidden');
+  document.getElementById('responseArea').classList.add('hidden');
+
+  setTimeout(()=>{
+    document.getElementById('genLoading').classList.add('hidden');
+    document.getElementById('responseArea').classList.remove('hidden');
+
+    const top = state.similarities.slice(0, state.topK);
+    const answer = buildAnswer(state.query, top);
+    typeWriter(document.getElementById('responseText'), answer);
+
+    document.getElementById('sourcesGrid').innerHTML = top.map((s,i)=>`
+      <div class="chunk-tile top-pick">
+        <div class="chunk-tag picked">✓ Source ${i+1} · ${Math.round(s.score*100)}% match</div>
+        <div class="chunk-body">${esc(s.text)}</div>
+      </div>`).join('');
+  }, 2000);
+  return true;
+}
+
+function buildAnswer(query, chunks) {
+  const q = query.toLowerCase();
+  const parts = [];
+
+  // Opening sentence based on query topic
+  if (q.includes('hallucin') || q.includes('making things up') || q.includes('avoid'))
+    parts.push(`Great question! Here's what the documents say about avoiding errors:`);
+  else if (q.includes('embed'))
+    parts.push(`Here's what the documents explain about embeddings:`);
+  else if (q.includes('chunk') || q.includes('split'))
+    parts.push(`The documents explain chunking like this:`);
+  else if (q.includes('vector') || q.includes('database') || q.includes('store'))
+    parts.push(`Here's what the documents say about vector stores:`);
+  else if (q.includes('cosine') || q.includes('similar'))
+    parts.push(`On the topic of similarity matching, the documents say:`);
+  else
+    parts.push(`Based on the documents provided, here is what I found:`);
+
+  chunks.forEach((c,i) => {
+    const sentences = c.text.replace(/\s+/g,' ').split(/(?<=\.)\s+/).filter(s=>s.trim().length>10);
+    const lead = sentences[0] || c.text;
+    parts.push(`${lead.trim()} <span class="citation-chip">[Source ${i+1}]</span>`);
+  });
+
+  parts.push(`This answer was built entirely from your documents — no guessing involved!`);
+  return parts.join(' ');
+}
+
+function typeWriter(el, html) {
+  el.innerHTML = '';
+  const cursor = '<span class="typing-cursor"></span>';
+  let i = 0;
+  function tick() {
+    i += 4;
+    el.innerHTML = html.slice(0,i) + cursor;
+    if (i < html.length) setTimeout(tick, 12);
+    else el.innerHTML = html;
+  }
+  tick();
+}
+
+function tryAnotherQuery() { state.maxUnlocked = Math.max(state.maxUnlocked, 4); goToStep(4); }
+function startOver() {
+  state.chunks=[]; state.embeddings=[]; state.query='';
+  state.queryEmbedding=[]; state.similarities=[];
+  state.maxUnlocked=0; state.currentStep=0;
+  goToStep(0); renderDocList();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderDocList();
+buildChunks();
+document.getElementById('chunkSize').addEventListener('input', onSliderChange);
+document.getElementById('overlapSize').addEventListener('input', onSliderChange);
+</script>
+</body>
+</html>
